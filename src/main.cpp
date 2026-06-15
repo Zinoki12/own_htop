@@ -22,7 +22,7 @@ int main() {
   } else { // child
   } */
 
-  char *ans = read_uptime();
+  char *ans = load_average();
   std::cout << ans << std::endl;
 
   return 0;

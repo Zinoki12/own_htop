@@ -25,6 +25,7 @@ char *read_uptime() {
   char buffer[BUFFER_SIZE];
 
   fgets(buffer, sizeof(buffer), fp);
+  fclose(fp);
 
   char *uptime = strtok(buffer, delimeters);
 
@@ -44,4 +45,28 @@ char *read_uptime() {
   }
 
   return strdup(result);
+}
+
+char *load_average() {
+  FILE *fp = fopen("/proc/loadavg", "r");
+
+  if (fp == NULL) {
+    std::cerr << "uptime error" << std::endl;
+    return NULL;
+  }
+
+  char line[BUFFER_SIZE];
+  size_t size = sizeof(line);
+  fgets(line, size, fp);
+  fclose(fp);
+
+  float a, b, c;
+  int res = sscanf(line, "%f %f %f", &a, &b, &c);
+  if (res != 3) {
+    std::cerr << "load_average error" << std::endl;
+  }
+
+  snprintf(line, size, "Load average: %.2f %.2f %.2f", a, b, c);
+
+  return strdup(line);
 }

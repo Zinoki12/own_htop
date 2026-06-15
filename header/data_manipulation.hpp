@@ -4,5 +4,6 @@
 struct file_data;
 
 char* read_uptime();
+char* load_average();
 
 #endif
