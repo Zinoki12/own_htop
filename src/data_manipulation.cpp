@@ -1,12 +1,8 @@
 #include "../header/data_manipulation.hpp"
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <sched.h>
-#include <stdio.h>
+#include <cstdio>
+#include <pwd.h>
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 512
 
 const char *delimeters = " ";
 
@@ -69,4 +65,52 @@ char *load_average() {
   snprintf(line, size, "Load average: %.2f %.2f %.2f", a, b, c);
 
   return strdup(line);
+}
+
+int read_uid(char *file) {
+  FILE *fp = fopen(file, "r");
+  if (fp == NULL) {
+    std::cerr << "Open status file error" << std::endl;
+  }
+
+  char line[BUFFER_SIZE];
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    if (strncmp(line, "Uid:", 4) == 0) {
+      int uid;
+
+      if (sscanf(line, "Uid: %d", &uid) == 1) {
+        return uid;
+      }
+    }
+  }
+  return -1;
+}
+
+void load_body_htop() {
+  DIR *dir;
+  struct dirent *entry;
+
+  dir = opendir("/proc");
+
+  if (!dir) {
+    std::cerr << "Opendir error" << std::endl;
+  }
+
+  char name[BUFFER_SIZE];
+  char *ld = load_average();
+  char *uptime = read_uptime();
+
+  printf("\t%s\n\t%s\n", ld, uptime);
+  printf("PID\tUSER\n");
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (atoi(entry->d_name) != 0) {
+      snprintf(name, sizeof(name), "/proc/%s/status", entry->d_name);
+      int uid = read_uid(name);
+      struct passwd *pw = getpwuid(uid);
+      printf("%s\t%s\n", entry->d_name, pw->pw_name);
+    }
+
+    // return NULL;
+  }
 }

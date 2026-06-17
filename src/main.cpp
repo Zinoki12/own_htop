@@ -22,8 +22,10 @@ int main() {
   } else { // child
   } */
 
-  char *ans = load_average();
-  std::cout << ans << std::endl;
+  // char *ans = load_average();
+  // std::cout << ans << std::endl;
+
+  load_body_htop();
 
   return 0;
 }
