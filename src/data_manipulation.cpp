@@ -1,5 +1,8 @@
 #include "../header/data_manipulation.hpp"
+#include <cstddef>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <pwd.h>
 
 #define BUFFER_SIZE 512
@@ -67,7 +70,7 @@ char *load_average() {
   return strdup(line);
 }
 
-int read_uid(char *file) {
+int read_uid(char file[]) {
   FILE *fp = fopen(file, "r");
   if (fp == NULL) {
     std::cerr << "Open status file error" << std::endl;
@@ -84,6 +87,37 @@ int read_uid(char *file) {
     }
   }
   return -1;
+}
+
+char *pri_ni_sta_na(char file[]) {
+  file[strlen(file) - 2] = '\0';
+  FILE *fp = fopen(file, "r");
+  char **data = (char **)malloc(3 * sizeof(char *));
+  char *word = (char *)malloc(16 * sizeof(char));
+
+  if (fp == NULL) {
+    std::cerr << "Error open file pri_ni" << std::endl;
+  }
+
+  // getting status
+  short space = 0, i = 0;
+  int ch;
+  while ((ch = fgetc(fp)) != EOF) {
+    if (ch == ' ') {
+      if (space == 2) {
+        break;
+      }
+      space++;
+      word[0] = '\0';
+      i = 0;
+      continue;
+    }
+    word[i] = (char)ch;
+    i++;
+    word[i] = '\0';
+  }
+
+  return strdup(word);
 }
 
 void load_body_htop() {

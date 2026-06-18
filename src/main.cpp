@@ -26,6 +26,10 @@ int main() {
   // std::cout << ans << std::endl;
 
   load_body_htop();
+  char path[] = "/proc/1594/status";
+  char *word = pri_ni_sta_na(path);
+
+  printf("%s", word);
 
   return 0;
 }
