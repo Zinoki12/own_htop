@@ -51,5 +51,3 @@ make
 - [ ] Time+
 - [ ] Command
 - [ ] Auto refresh
-
-### v0.
