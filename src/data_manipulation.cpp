@@ -1,5 +1,8 @@
-#include "../header/data_manipulation.hpp"
+#include "data_manipulation.hpp"
+#include <cstddef>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <pwd.h>
 
 #define BUFFER_SIZE 512
@@ -67,7 +70,7 @@ char *load_average() {
   return strdup(line);
 }
 
-int read_uid(char *file) {
+int read_uid(char file[]) {
   FILE *fp = fopen(file, "r");
   if (fp == NULL) {
     std::cerr << "Open status file error" << std::endl;
@@ -86,6 +89,45 @@ int read_uid(char *file) {
   return -1;
 }
 
+char **stat_parse(char file[]) {
+  file[strlen(file) - 2] = '\0';
+  FILE *fp = fopen(file, "r");
+  char **data = (char **)malloc(3 * sizeof(char *));
+  char *word = (char *)malloc(BUFFER_SIZE * sizeof(char));
+
+  if (fp == NULL) {
+    std::cerr << "Error open file pri_ni" << std::endl;
+  }
+
+  // getting status, priority and niceness
+  short space = 0, i = 0;
+  int ch;
+  while ((ch = fgetc(fp)) != EOF) {
+    if (ch == ' ' || ch == '\n') {
+      word[i] = '\0';
+
+      switch (space) {
+      case 2:
+        data[0] = strdup(word);
+        break;
+      case 17:
+        data[1] = strdup(word);
+        break;
+      case 18:
+        data[2] = strdup(word);
+        break;
+      }
+      i = 0;
+      space++;
+    } else {
+      if (i < BUFFER_SIZE - 2) {
+        word[i++] = (char)ch;
+      }
+    }
+  }
+  return data;
+}
+
 void load_body_htop() {
   DIR *dir;
   struct dirent *entry;
@@ -100,15 +142,17 @@ void load_body_htop() {
   char *ld = load_average();
   char *uptime = read_uptime();
 
-  printf("\t%s\n\t%s\n", ld, uptime);
-  printf("PID\tUSER\n");
+  printf("\t\t\t%s\n\t\t\t%s\n\n", ld, uptime);
+  printf(" PID\tUSER\t\tPRI\tNI\tS\n");
 
   while ((entry = readdir(dir)) != NULL) {
     if (atoi(entry->d_name) != 0) {
       snprintf(name, sizeof(name), "/proc/%s/status", entry->d_name);
       int uid = read_uid(name);
       struct passwd *pw = getpwuid(uid);
-      printf("%s\t%s\n", entry->d_name, pw->pw_name);
+      char **s_pri_ni = stat_parse(name);
+      printf(" %-5s  %-5s\t\t%-3s\t%-3s\t%-3s\n", entry->d_name, pw->pw_name,
+             s_pri_ni[1], s_pri_ni[2], s_pri_ni[0]);
     }
 
     // return NULL;

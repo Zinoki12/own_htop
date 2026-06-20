@@ -15,6 +15,7 @@ struct file_data;
 char *read_uptime();
 char *load_average();
 void load_body_htop();
-int read_uid(char *file);
+int read_uid(char file[]);
+char **stat_parse(char file[]);
 
 #endif
