@@ -10,12 +10,14 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-struct file_data;
+struct processInfo;
+struct statInfo;
+struct statusInfo;
 
-char *read_uptime();
-char *load_average();
-void load_body_htop();
-int read_uid(char file[]);
-char **stat_parse(char file[]);
+std::string read_uptime();
+std::string load_average();
+processInfo read_info();
+statusInfo parse_status(char file[]);
+statInfo stat_parse(char file[]);
 
 #endif

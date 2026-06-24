@@ -1,20 +1,46 @@
 #include "data_manipulation.hpp"
-#include <cstddef>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <pwd.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #define BUFFER_SIZE 512
+#define ll long long
 
 const char *delimeters = " ";
 
-struct file_data {
-  pid_t pid;
-  char user[BUFFER_SIZE];
+struct processInfo {
+  std::string la;
+  std::string uptime;
+  int pid;
+  std::string User;
+  short priority;
+  short niceseness;
+  char status;
+  std::string virtual_memory;
+  std::string res;
+  int shared_mem;
+  float cpu;
+  float mem;
+  std::string time;
+  std::string command;
 };
 
-char *read_uptime() {
+struct statInfo {
+  char status;
+  short pri;
+  short ni;
+};
+
+struct statusInfo {
+  int uid;
+  ll virt;
+  ll res;
+  ll shr;
+};
+
+std::string read_uptime() {
   FILE *fp = fopen("/proc/uptime", "r");
 
   if (fp == NULL) {
@@ -43,10 +69,10 @@ char *read_uptime() {
     snprintf(result, size, "Uptime: %d:%d:%d", hours, minutes, seconds);
   }
 
-  return strdup(result);
+  return result;
 }
 
-char *load_average() {
+std::string load_average() {
   FILE *fp = fopen("/proc/loadavg", "r");
 
   if (fp == NULL) {
@@ -67,32 +93,71 @@ char *load_average() {
 
   snprintf(line, size, "Load average: %.2f %.2f %.2f", a, b, c);
 
-  return strdup(line);
+  return line;
 }
 
-int read_uid(char file[]) {
-  FILE *fp = fopen(file, "r");
-  if (fp == NULL) {
-    std::cerr << "Open status file error" << std::endl;
-  }
+statusInfo parse_status(char file[]) {
+  statusInfo status = {};
+  std::ifstream fd(file);
+  std::string line;
 
-  char line[BUFFER_SIZE];
-  while (fgets(line, sizeof(line), fp) != NULL) {
-    if (strncmp(line, "Uid:", 4) == 0) {
-      int uid;
+  std::stringstream ss;
+  std::string prefix;
+  ll rssfile = 0, rssshm = 0;
 
-      if (sscanf(line, "Uid: %d", &uid) == 1) {
-        return uid;
+  if (fd.is_open()) {
+    while (std::getline(fd, line)) {
+      if (line.rfind("Uid:", 0) == 0) {
+        ss.str(line);
+
+        ss >> prefix >> status.uid;
+
+        ss.clear();
+      }
+
+      else if (line.rfind("VmSize:", 0) == 0) {
+        ss.str(line);
+
+        ss >> prefix >> status.virt;
+
+        ss.clear();
+      }
+
+      else if (line.rfind("VmRSS:", 0) == 0) {
+        ss.str(line);
+
+        ss >> prefix >> status.res;
+
+        ss.clear();
+      }
+
+      if (line.rfind("RssFile:", 0) == 0) {
+        ss.str(line);
+
+        ss >> prefix >> rssfile;
+
+        ss.clear();
+      }
+
+      if (line.rfind("RssShmem:", 0) == 0) {
+        ss.str(line);
+
+        ss >> prefix >> rssshm;
+
+        ss.clear();
       }
     }
+    status.shr = rssfile + rssshm;
   }
-  return -1;
+
+  return status;
 }
 
-char **stat_parse(char file[]) {
+// Доделать обновленную версию через структуру
+statInfo stat_parse(char file[]) {
   file[strlen(file) - 2] = '\0';
   FILE *fp = fopen(file, "r");
-  char **data = (char **)malloc(3 * sizeof(char *));
+  struct statInfo info;
   char *word = (char *)malloc(BUFFER_SIZE * sizeof(char));
 
   if (fp == NULL) {
@@ -108,13 +173,14 @@ char **stat_parse(char file[]) {
 
       switch (space) {
       case 2:
-        data[0] = strdup(word);
+        info.status = *word;
+        ;
         break;
       case 17:
-        data[1] = strdup(word);
+        info.pri = atoi(word);
         break;
       case 18:
-        data[2] = strdup(word);
+        info.ni = atoi(word);
         break;
       }
       i = 0;
@@ -125,12 +191,15 @@ char **stat_parse(char file[]) {
       }
     }
   }
-  return data;
+  return info;
 }
 
-void load_body_htop() {
+//Доделать добавление в вектор данных
+
+processInfo read_info() {
   DIR *dir;
   struct dirent *entry;
+  std::vector<typename Tp>
 
   dir = opendir("/proc");
 
@@ -139,22 +208,30 @@ void load_body_htop() {
   }
 
   char name[BUFFER_SIZE];
-  char *ld = load_average();
-  char *uptime = read_uptime();
-
-  printf("\t\t\t%s\n\t\t\t%s\n\n", ld, uptime);
-  printf(" PID\tUSER\t\tPRI\tNI\tS\n");
+  processInfo info = {};
+  info.la = load_average();
+  info.uptime = read_uptime();
 
   while ((entry = readdir(dir)) != NULL) {
     if (atoi(entry->d_name) != 0) {
       snprintf(name, sizeof(name), "/proc/%s/status", entry->d_name);
-      int uid = read_uid(name);
-      struct passwd *pw = getpwuid(uid);
-      char **s_pri_ni = stat_parse(name);
-      printf(" %-5s  %-5s\t\t%-3s\t%-3s\t%-3s\n", entry->d_name, pw->pw_name,
-             s_pri_ni[1], s_pri_ni[2], s_pri_ni[0]);
+      statusInfo status = parse_status(
+          name); // сделать тип данных и впихнуть сюда, фунция parse_status
+      struct passwd *pw = getpwuid(status.uid);
+      struct statInfo statInfo = stat_parse(name);
+      info.pid = atoi(entry->d_name);
+      info.User = pw->pw_name;
+      info.priority = statInfo.pri;
+      info.status = statInfo.status;
+      info.niceseness = statInfo.ni;
     }
 
     // return NULL;
   }
+}
+
+// сделать вывод таблицы
+
+void print_table(processInfo info){
+
 }
